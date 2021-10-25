@@ -5,7 +5,7 @@ const $showsList = $("#showsList");
 const $episodesArea = $("#episodesArea");
 const $searchForm = $("#searchForm");
 
-const DEFAULT_IMAGE = {medium: "https://tinyurl.com/tv-missing"};
+const DEFAULT_IMAGE = { medium: "https://tinyurl.com/tv-missing" };
 const API_URL = "http://api.tvmaze.com/";
 
 interface SimpleShowInterface {
@@ -23,6 +23,13 @@ interface ImageInterface {
   medium: string
 }
 
+interface EpisodeInterface {
+  id: number;
+  name: string;
+  season: number;
+  number: number;
+}
+
 /** Given a search term, search for tv shows that match that query.
  *
  *  Returns (promise) array of show objects: [show, show, ...].
@@ -34,9 +41,9 @@ async function getShowsByTerm(term: string): Promise<SimpleShowInterface[]> {
   const resp = await axios.get(`${API_URL}search/shows?q=${term}`)
   return resp.data.map((scoreAndShow: ShowInterface) => {
     return {
-      id: scoreAndShow.show.id, 
-      name: scoreAndShow.show.name, 
-      summary: scoreAndShow.show.summary, 
+      id: scoreAndShow.show.id,
+      name: scoreAndShow.show.name,
+      summary: scoreAndShow.show.summary || "No description provided.",
       image: scoreAndShow.show.image.medium || DEFAULT_IMAGE.medium
     }
   });
@@ -50,11 +57,11 @@ function populateShows(shows: SimpleShowInterface[]) {
 
   for (let show of shows) {
     const $show = $(
-        `<div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
+      `<div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
          <div class="media">
-           <img
-              src="http://static.tvmaze.com/uploads/images/medium_portrait/160/401704.jpg"
-              alt="Bletchly Circle San Francisco"
+           <img 
+              src="${show.image}" 
+              alt="${show.name}" 
               class="w-25 mr-3">
            <div class="media-body">
              <h5 class="text-primary">${show.name}</h5>
@@ -63,11 +70,13 @@ function populateShows(shows: SimpleShowInterface[]) {
                Episodes
              </button>
            </div>
-         </div>
+         </div>  
        </div>
-      `);
+      `
+    );
 
-    $showsList.append($show);  }
+    $showsList.append($show);
+  }
 }
 
 
@@ -92,9 +101,33 @@ $searchForm.on("submit", async function (evt) {
 /** Given a show ID, get from API and return (promise) array of episodes:
  *      { id, name, season, number }
  */
-
-// async function getEpisodesOfShow(id) { }
+async function getEpisodesOfShow(id: number): Promise<EpisodeInterface[]> {
+  //http://api.tvmaze.com/shows/SHOW-ID-HERE/episodes.
+  //get episode id, name, season, number
+  // return an array of objects with this data
+  let episodeList = [];
+  let episodes = await axios.get(`${API_URL}/shows/${id}/episodes`);
+  return episodes.data.map((episode: EpisodeInterface) => {
+    return {
+      id: episode.id, 
+      name: episode.name,
+      season: episode.season,
+      number: episode.number
+    }
+  });
+}
 
 /** Write a clear docstring for this function... */
 
-// function populateEpisodes(episodes) { }
+function populateEpisodes(episodes: EpisodeInterface[])  {
+  $episodesArea.empty();
+
+  for (let episode of episodes) {
+    const $episode = $(
+      `<li>${episode.name} (Season: ${episode.season}, Number: ${episode.number})</li>`
+    );
+
+    $episodesArea.append($episode);
+  }
+}
+
